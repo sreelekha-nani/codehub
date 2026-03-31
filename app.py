@@ -1,5 +1,7 @@
 import os
-from flask import Flask, render_template, redirect, url_for, request, flash
+import random
+import string
+from flask import Flask, render_template, redirect, url_for, request, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -8,12 +10,44 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key_here'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'codehub.db')
+
+# --- Database Configuration ---
+# Use DATABASE_URL from environment (Render/Heroku) or fallback to local SQLite
+db_url = os.environ.get('DATABASE_URL')
+
+if db_url:
+    # Fix for SQLAlchemy 1.4+ which requires 'postgresql://' instead of 'postgres://'
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+else:
+    # Local SQLite fallback
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'codehub.db')
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
+# --- Helper Functions ---
+
+def generate_random_password(length=8):
+    characters = string.ascii_letters + string.digits
+    return ''.join(random.choice(characters) for i in range(length))
+
+def get_next_student_id():
+    last_student = User.query.filter(User.username.like('CH%')).order_by(User.id.desc()).first()
+    if not last_student:
+        return "CH001"
+    
+    try:
+        # Extract number from CH001 -> 1
+        last_id_num = int(last_student.username[2:])
+        new_id_num = last_id_num + 1
+        return f"CH{new_id_num:03d}"
+    except ValueError:
+        return "CH001"
 
 # --- Database Models ---
 
@@ -130,22 +164,20 @@ def generate_student():
     if current_user.role != 'admin':
         return redirect(url_for('dashboard'))
     
-    username = request.form.get('username')
-    password = request.form.get('password')
+    # Auto-generate username and password
+    username = get_next_student_id()
+    password = generate_random_password()
     
-    if User.query.filter_by(username=username).first():
-        flash('Username already exists.', 'danger')
-    else:
-        # Use default hashing method for better compatibility
-        new_student = User(
-            username=username,
-            password=generate_password_hash(password),
-            role='student'
-        )
-        db.session.add(new_student)
-        db.session.commit()
-        flash(f'Student {username} created successfully!', 'success')
-        
+    new_student = User(
+        username=username,
+        password=generate_password_hash(password),
+        role='student'
+    )
+    db.session.add(new_student)
+    db.session.commit()
+    
+    # Use a specific flash category 'credentials' to show the popup/card
+    flash(f'Student created successfully! Username: {username}, Password: {password}', 'credentials')
     return redirect(url_for('admin_panel'))
 
 @app.route('/dashboard')

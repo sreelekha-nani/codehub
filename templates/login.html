@@ -5,25 +5,62 @@
     <div class="col-md-5">
         <div class="card shadow-lg border-0 rounded-4">
             <div class="card-body p-5">
-                <h2 class="text-center mb-4 fw-bold text-primary">Student Login</h2>
-                <form method="POST">
+                <h2 class="text-center mb-4 fw-bold text-primary">CodeHub Login</h2>
+                
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% set has_error = false %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            {% if category == 'danger' %}
+                                {% set has_error = true %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST" id="loginForm">
                     <div class="mb-3">
                         <label for="username" class="form-label fw-semibold text-secondary small text-uppercase">Username</label>
-                        <input type="text" name="username" class="form-control form-control-lg bg-light border-0" id="username" placeholder="Enter username" required>
+                        <input type="text" name="username" class="form-control form-control-lg bg-light border-0 {% if get_flashed_messages(category_filter=['danger']) %}is-invalid{% endif %}" id="username" placeholder="Enter username" required>
                     </div>
                     <div class="mb-4">
                         <label for="password" class="form-label fw-semibold text-secondary small text-uppercase">Password</label>
-                        <input type="password" name="password" class="form-control form-control-lg bg-light border-0" id="password" placeholder="Enter password" required>
+                        <div class="input-group">
+                            <input type="password" name="password" class="form-control form-control-lg bg-light border-0 {% if get_flashed_messages(category_filter=['danger']) %}is-invalid{% endif %}" id="password" placeholder="Enter password" required>
+                            <button class="btn btn-light border-0" type="button" id="togglePassword">
+                                <i class="bi bi-eye-slash" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">
+                            Invalid username or password.
+                        </div>
                     </div>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary btn-lg shadow-sm">Login</button>
                     </div>
                 </form>
                 <div class="mt-4 text-center">
-                    <p class="text-muted small mb-0">Admin? Log in with your admin credentials here.</p>
+                    <p class="text-muted small mb-0">Use your CH### credentials to login.</p>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Password Toggle Script -->
+<script>
+    const togglePassword = document.querySelector('#togglePassword');
+    const password = document.querySelector('#password');
+    const toggleIcon = document.querySelector('#toggleIcon');
+
+    togglePassword.addEventListener('click', function (e) {
+        // toggle the type attribute
+        const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+        password.setAttribute('type', type);
+        
+        // toggle the eye icon
+        toggleIcon.classList.toggle('bi-eye');
+        toggleIcon.classList.toggle('bi-eye-slash');
+    });
+</script>
 {% endblock %}

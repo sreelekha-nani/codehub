@@ -9,6 +9,25 @@
 </div>
 
 <div class="row">
+    <!-- Display Generated Credentials Card (If any) -->
+    {% with messages = get_flashed_messages(category_filter=['credentials']) %}
+        {% if messages %}
+            {% for message in messages %}
+            <div class="col-12 mb-4">
+                <div class="card bg-info text-white shadow-sm border-0">
+                    <div class="card-body py-4 text-center">
+                        <h4 class="fw-bold mb-3"><i class="bi bi-shield-check me-2"></i>Credentials Generated!</h4>
+                        <div class="p-3 bg-white text-dark rounded-3 d-inline-block">
+                            <span class="fs-5">{{ message }}</span>
+                        </div>
+                        <p class="mt-3 mb-0 small opacity-75">Please share these credentials with the student. They won't be shown again in plain text.</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
     <!-- Add Question Section -->
     <div class="col-lg-6 mb-4">
         <div class="card shadow-sm border-0 h-100">
@@ -39,31 +58,31 @@
     <div class="col-lg-6 mb-4">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-white py-3">
-                <h5 class="mb-0 fw-bold">Generate Student Account</h5>
+                <h5 class="mb-0 fw-bold">Student Management</h5>
             </div>
-            <div class="card-body">
+            <div class="card-body text-center py-5">
+                <div class="mb-4">
+                    <i class="bi bi-person-plus-fill text-primary" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="fw-bold">Generate Student Account</h5>
+                <p class="text-muted mb-4 px-4">Click below to automatically generate a unique username (CH###) and a secure random password for a new student.</p>
+                
                 <form action="{{ url_for('generate_student') }}" method="POST">
-                    <div class="mb-3">
-                        <label class="form-label small text-uppercase fw-bold text-muted">Student Username</label>
-                        <input type="text" name="username" class="form-control" placeholder="e.g., john_doe" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small text-uppercase fw-bold text-muted">Password</label>
-                        <input type="password" name="password" class="form-control" placeholder="Enter password" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100 py-2">Create Student</button>
+                    <button type="submit" class="btn btn-primary btn-lg w-100 py-3 shadow-sm">
+                        <i class="bi bi-magic me-2"></i>Generate Student
+                    </button>
                 </form>
 
-                <hr class="my-4 text-muted">
-                <h6 class="fw-bold mb-3">Existing Students</h6>
-                <div class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;">
+                <hr class="my-5 text-muted">
+                <h6 class="fw-bold mb-3 text-start ps-3">Existing Students ({{ students|length }})</h6>
+                <div class="list-group list-group-flush text-start" style="max-height: 250px; overflow-y: auto;">
                     {% for student in students %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-0 px-0">
+                        <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-0 px-3">
                             <span><i class="bi bi-person me-2"></i>{{ student.username }}</span>
                             <span class="badge bg-light text-dark border">{{ student.submissions|length }} subms</span>
                         </div>
                     {% else %}
-                        <p class="text-muted small">No students created yet.</p>
+                        <p class="text-muted small ps-3">No students created yet.</p>
                     {% endfor %}
                 </div>
             </div>
