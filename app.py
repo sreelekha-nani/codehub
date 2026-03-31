@@ -1,26 +1,29 @@
 import os
 import random
 import string
-import pandas as pd
 import logging
+import pandas as pd
 from flask import Flask, render_template, redirect, url_for, request, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-# 7. LOGGING (MANDATORY)
-logging.basicConfig(level=logging.DEBUG)
+# Configure logging for production debugging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'render_deploy_secret_key_2024')
 
-# 6. RENDER COMPATIBILITY (DATABASE_URL)
-db_url = os.environ.get('DATABASE_URL')
-if db_url and db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+# 1. Database & 7. Environment Variables
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'production_secret_key_8822')
+db_uri = os.environ.get("SQLALCHEMY_DATABASE_URI")
 
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+# Fix for Render/Heroku postgres:// prefix
+if db_uri and db_uri.startswith("postgres://"):
+    db_uri = db_uri.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = '/tmp'
 
@@ -28,12 +31,12 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# 1. DATABASE FIX (User Model)
+# 2. User Model with Fix for password length
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=True)
-    password = db.Column(db.Text, nullable=False) # STRICT REQUIREMENT: db.Text
+    password = db.Column(db.Text, nullable=False) # Fixed: No length limit
     role = db.Column(db.String(50), nullable=False) # 'admin' or 'student'
 
 class Question(db.Model):
@@ -54,18 +57,24 @@ class Submission(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# 2 & 3. SAFE DB INITIALIZATION & ADMIN CREATION
+# 3. Startup Crash Fix & 4. Safe Table Creation & 5. Admin Creation Fix & 8. Error Handling
 with app.app_context():
-    db.create_all()
-    if not User.query.filter_by(username="admin").first():
-        admin = User(
-            username="admin",
-            password=generate_password_hash("admin123"),
-            role="admin"
-        )
-        db.session.add(admin)
-        db.session.commit()
-        logging.info("Admin user created successfully.")
+    try:
+        db.create_all()
+        # Safe admin check and creation
+        if not User.query.filter_by(username="admin").first():
+            admin_user = User(
+                username="admin",
+                email="admin@codehub.com",
+                password=generate_password_hash("admin123"),
+                role="admin"
+            )
+            db.session.add(admin_user)
+            db.session.commit()
+            logger.info("Admin user created successfully.")
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Database Initialization Error: {e}")
 
 # --- Helper Functions ---
 
@@ -87,8 +96,6 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard' if current_user.role == 'student' else 'admin_panel'))
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -96,33 +103,20 @@ def login():
         if user and check_password_hash(user.password, password):
             login_user(user)
             return redirect(url_for('dashboard'))
-        flash('Invalid student credentials.', 'danger')
+        flash('Invalid credentials', 'danger')
     return render_template('login.html')
 
-# 5. LOGIN ROUTE FIX (/adminlogin)
 @app.route('/adminlogin', methods=['GET', 'POST'])
 def admin_login():
-    if request.method == 'GET':
-        return render_template('admin_login.html')
-    
-    username = request.form.get('username')
-    password = request.form.get('password')
-    
-    try:
-        user = User.query.filter_by(username=username).first()
-
-        if not user:
-            return "User not found"
-
-        if not check_password_hash(user.password, password):
-            return "Wrong password"
-
-        login_user(user)
-        return redirect(url_for("admin_panel"))
-
-    except Exception as e:
-        logging.error(f"Login Error: {str(e)}")
-        return f"Error: {str(e)}"
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username, role='admin').first()
+        if user and check_password_hash(user.password, password):
+            login_user(user)
+            return redirect(url_for('admin_panel'))
+        flash('Invalid admin credentials', 'danger')
+    return render_template('admin_login.html')
 
 @app.route('/admin')
 @login_required
@@ -149,14 +143,20 @@ def upload_students():
                 email = str(email).strip()
                 if not User.query.filter_by(email=email).first():
                     username, password = get_next_student_id(), generate_random_password()
-                    db.session.add(User(username=username, email=email, password=generate_password_hash(password), role='student'))
+                    new_student = User(
+                        username=username, 
+                        email=email, 
+                        password=generate_password_hash(password), 
+                        role='student'
+                    )
+                    db.session.add(new_student)
                     db.session.commit()
                     created.append(f"{email} | {username} | {password}")
             if created: session['batch_credentials'] = created
-            flash(f'Batch processed: {len(created)} students enrolled.', 'success')
+            flash('Upload successful', 'success')
         except Exception as e:
             db.session.rollback()
-            flash(f"Error processing Excel: {str(e)}", 'danger')
+            flash(f"Error: {e}", 'danger')
     return redirect(url_for('admin_panel'))
 
 @app.route('/admin/edit_student/<int:id>', methods=['GET', 'POST'])
@@ -186,7 +186,11 @@ def delete_student(id):
 @login_required
 def add_question():
     if current_user.role != 'admin': return redirect(url_for('dashboard'))
-    db.session.add(Question(title=request.form.get('title'), description=request.form.get('description'), answer=request.form.get('answer')))
+    db.session.add(Question(
+        title=request.form.get('title'), 
+        description=request.form.get('description'), 
+        answer=request.form.get('answer')
+    ))
     db.session.commit()
     return redirect(url_for('admin_panel'))
 
@@ -212,7 +216,11 @@ def submit_answer(question_id):
     if existing: 
         existing.answer = request.form.get('answer')
     else: 
-        db.session.add(Submission(user_id=current_user.id, question_id=question_id, answer=request.form.get('answer')))
+        db.session.add(Submission(
+            user_id=current_user.id, 
+            question_id=question_id, 
+            answer=request.form.get('answer')
+        ))
     db.session.commit()
     return redirect(url_for('dashboard'))
 
@@ -227,4 +235,6 @@ def leaderboard():
     return render_template('leaderboard.html', rankings=rankings)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Use environment port for local testing
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
