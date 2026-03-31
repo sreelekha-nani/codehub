@@ -8,10 +8,10 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-basedir = os.path.abspath(os.path.dirname(__file__))
-
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key_here'
+# Fix for Vercel: specify template and static folders relative to the root
+# Since this file (app.py) is in the root, and api/index.py is in /api
+app = Flask(__name__, template_folder="templates", static_folder="static")
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_secret_key_123')
 
 # --- Database Configuration ---
 db_url = os.environ.get('DATABASE_URL')
@@ -20,41 +20,25 @@ if db_url:
         db_url = db_url.replace("postgres://", "postgresql://", 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 else:
+    # Local fallback (won't persist on Vercel)
+    basedir = os.path.abspath(os.path.dirname(__file__))
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'codehub.db')
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'uploads')
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+app.config['UPLOAD_FOLDER'] = '/tmp'
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
-
-# --- Helper Functions ---
-
-def generate_random_password(length=8):
-    characters = string.ascii_letters + string.digits
-    return ''.join(random.choice(characters) for i in range(length))
-
-def get_next_student_id():
-    last_student = User.query.filter(User.username.like('CH%')).order_by(User.id.desc()).first()
-    if not last_student:
-        return "CH001"
-    try:
-        last_id_num = int(last_student.username[2:])
-        new_id_num = last_id_num + 1
-        return f"CH{new_id_num:03d}"
-    except ValueError:
-        return "CH001"
 
 # --- Database Models ---
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
-    email = db.Column(db.String(150), unique=True, nullable=True) # Added email
+    email = db.Column(db.String(150), unique=True, nullable=True)
     password = db.Column(db.String(150), nullable=False)
-    role = db.Column(db.String(50), nullable=False) # 'admin' or 'student'
+    role = db.Column(db.String(50), nullable=False)
 
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -67,7 +51,6 @@ class Submission(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False)
     answer = db.Column(db.Text, nullable=False)
-    
     user = db.relationship('User', backref=db.backref('submissions', lazy=True))
     question = db.relationship('Question', backref=db.backref('submissions', lazy=True))
 
@@ -75,19 +58,33 @@ class Submission(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# --- Initial Database Setup ---
+# --- Defensive Database Initialization ---
+try:
+    with app.app_context():
+        db.create_all()
+        if not User.query.filter_by(username='admin').first():
+            admin_user = User(
+                username='admin',
+                email='admin@codehub.com',
+                password=generate_password_hash('admin123'),
+                role='admin'
+            )
+            db.session.add(admin_user)
+            db.session.commit()
+except Exception as e:
+    print(f"DB Init Error: {e}")
 
-with app.app_context():
-    db.create_all()
-    if not User.query.filter_by(username='admin').first():
-        admin_user = User(
-            username='admin',
-            email='admin@codehub.com',
-            password=generate_password_hash('admin123'),
-            role='admin'
-        )
-        db.session.add(admin_user)
-        db.session.commit()
+# --- Helper Functions ---
+
+def generate_random_password(length=8):
+    return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
+
+def get_next_student_id():
+    last = User.query.filter(User.username.like('CH%')).order_by(User.id.desc()).first()
+    if not last: return "CH001"
+    try:
+        return f"CH{int(last.username[2:]) + 1:03d}"
+    except: return "CH001"
 
 # --- Routes ---
 
@@ -99,99 +96,53 @@ def index():
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard' if current_user.role == 'student' else 'admin_panel'))
-    
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        user = User.query.filter_by(username=username, role='student').first()
-        
-        if user and check_password_hash(user.password, password):
+        user = User.query.filter_by(username=request.form.get('username'), role='student').first()
+        if user and check_password_hash(user.password, request.form.get('password')):
             login_user(user)
-            flash(f'Welcome, {username}!', 'success')
             return redirect(url_for('dashboard'))
-        
-        flash('Invalid student username or password.', 'danger')
+        flash('Invalid student credentials.', 'danger')
     return render_template('login.html')
 
 @app.route('/adminlogin', methods=['GET', 'POST'])
 def admin_login():
     if current_user.is_authenticated and current_user.role == 'admin':
         return redirect(url_for('admin_panel'))
-    
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        user = User.query.filter_by(username=username, role='admin').first()
-        
-        if user and check_password_hash(user.password, password):
+        user = User.query.filter_by(username=request.form.get('username'), role='admin').first()
+        if user and check_password_hash(user.password, request.form.get('password')):
             login_user(user)
-            flash('Admin Login Successful!', 'success')
             return redirect(url_for('admin_panel'))
-        
         flash('Invalid admin credentials.', 'danger')
     return render_template('admin_login.html')
 
 @app.route('/admin')
 @login_required
 def admin_panel():
-    if current_user.role != 'admin':
-        return redirect(url_for('dashboard'))
-    
-    questions = Question.query.all()
-    students = User.query.filter_by(role='student').all()
-    submissions = Submission.query.all()
-    return render_template('admin.html', questions=questions, students=students, submissions=submissions)
+    if current_user.role != 'admin': return redirect(url_for('dashboard'))
+    return render_template('admin.html', questions=Question.query.all(), students=User.query.filter_by(role='student').all(), submissions=Submission.query.all())
 
 @app.route('/admin/upload_students', methods=['POST'])
 @login_required
 def upload_students():
-    if current_user.role != 'admin':
-        return redirect(url_for('dashboard'))
-    
+    if current_user.role != 'admin': return redirect(url_for('dashboard'))
     file = request.files.get('file')
-    if not file or file.filename == '':
-        flash('No file selected.', 'danger')
-        return redirect(url_for('admin_panel'))
-    
     if file and file.filename.endswith('.xlsx'):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
         file.save(filepath)
-        
         try:
             df = pd.read_excel(filepath)
-            if 'email' not in df.columns:
-                flash("Excel must contain an 'email' column.", 'danger')
-                return redirect(url_for('admin_panel'))
-            
-            created_users = []
+            created = []
             for email in df['email']:
                 email = str(email).strip()
                 if not User.query.filter_by(email=email).first():
-                    username = get_next_student_id()
-                    password = generate_random_password()
-                    new_user = User(
-                        username=username,
-                        email=email,
-                        password=generate_password_hash(password),
-                        role='student'
-                    )
-                    db.session.add(new_user)
+                    username, password = get_next_student_id(), generate_random_password()
+                    db.session.add(User(username=username, email=email, password=generate_password_hash(password), role='student'))
                     db.session.commit()
-                    created_users.append(f"{email} | User: {username} | Pass: {password}")
-            
-            if created_users:
-                session['batch_credentials'] = created_users
-                flash(f'Successfully created {len(created_users)} students!', 'success')
-            else:
-                flash('No new students were created (emails might already exist).', 'info')
-                
-        except Exception as e:
-            flash(f"Error processing Excel: {str(e)}", 'danger')
-        
-        return redirect(url_for('admin_panel'))
-    
-    flash('Please upload a valid .xlsx file.', 'danger')
+                    created.append(f"{email} | {username} | {password}")
+            if created: session['batch_credentials'] = created
+            flash(f'Created {len(created)} students!', 'success')
+        except Exception as e: flash(f"Error: {e}", 'danger')
     return redirect(url_for('admin_panel'))
 
 @app.route('/admin/edit_student/<int:id>', methods=['GET', 'POST'])
@@ -200,13 +151,9 @@ def edit_student(id):
     if current_user.role != 'admin': return redirect(url_for('dashboard'))
     student = User.query.get_or_404(id)
     if request.method == 'POST':
-        student.username = request.form.get('username')
-        student.email = request.form.get('email')
-        new_password = request.form.get('password')
-        if new_password:
-            student.password = generate_password_hash(new_password)
+        student.username, student.email = request.form.get('username'), request.form.get('email')
+        if request.form.get('password'): student.password = generate_password_hash(request.form.get('password'))
         db.session.commit()
-        flash('Student updated successfully!', 'success')
         return redirect(url_for('admin_panel'))
     return render_template('edit_student.html', student=student)
 
@@ -215,65 +162,44 @@ def edit_student(id):
 def delete_student(id):
     if current_user.role != 'admin': return redirect(url_for('dashboard'))
     student = User.query.get_or_404(id)
-    # Delete related submissions first
     Submission.query.filter_by(user_id=student.id).delete()
     db.session.delete(student)
     db.session.commit()
-    flash('Student deleted!', 'info')
     return redirect(url_for('admin_panel'))
 
 @app.route('/admin/add_question', methods=['POST'])
 @login_required
 def add_question():
     if current_user.role != 'admin': return redirect(url_for('dashboard'))
-    new_q = Question(
-        title=request.form.get('title'),
-        description=request.form.get('description'),
-        answer=request.form.get('answer')
-    )
-    db.session.add(new_q)
+    db.session.add(Question(title=request.form.get('title'), description=request.form.get('description'), answer=request.form.get('answer')))
     db.session.commit()
-    flash('Question added!', 'success')
     return redirect(url_for('admin_panel'))
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
-    flash('Logged out.', 'info')
     return redirect(url_for('login'))
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
     if current_user.role != 'student': return redirect(url_for('admin_panel'))
-    questions = Question.query.all()
-    user_submissions = {s.question_id: s for s in current_user.submissions}
-    return render_template('dashboard.html', questions=questions, user_submissions=user_submissions)
+    return render_template('dashboard.html', questions=Question.query.all(), user_submissions={s.question_id: s for s in current_user.submissions})
 
 @app.route('/submit/<int:question_id>', methods=['POST'])
 @login_required
 def submit_answer(question_id):
     if current_user.role != 'student': return redirect(url_for('admin_panel'))
-    ans = request.form.get('answer')
     existing = Submission.query.filter_by(user_id=current_user.id, question_id=question_id).first()
-    if existing:
-        existing.answer = ans
-    else:
-        db.session.add(Submission(user_id=current_user.id, question_id=question_id, answer=ans))
+    if existing: existing.answer = request.form.get('answer')
+    else: db.session.add(Submission(user_id=current_user.id, question_id=question_id, answer=request.form.get('answer')))
     db.session.commit()
-    flash('Answer submitted!', 'success')
     return redirect(url_for('dashboard'))
 
 @app.route('/leaderboard')
 @login_required
 def leaderboard():
     from sqlalchemy import func
-    rankings = db.session.query(User.username, func.count(Submission.id).label('score'))\
-        .join(Submission, User.id == Submission.user_id, isouter=True)\
-        .filter(User.role == 'student')\
-        .group_by(User.id).order_by(db.desc('score')).all()
+    rankings = db.session.query(User.username, func.count(Submission.id).label('score')).join(Submission, User.id == Submission.user_id, isouter=True).filter(User.role == 'student').group_by(User.id).order_by(db.desc('score')).all()
     return render_template('leaderboard.html', rankings=rankings)
-
-if __name__ == '__main__':
-    app.run(debug=True)
