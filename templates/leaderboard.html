@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow border-0 rounded-4 overflow-hidden">
+            <div class="card-header bg-primary py-4 text-center">
+                <h2 class="mb-0 text-white fw-bold"><i class="bi bi-trophy me-3"></i>Leaderboard</h2>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-center">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="py-3 border-0">Rank</th>
+                                <th class="py-3 border-0">Student Username</th>
+                                <th class="py-3 border-0">Questions Attempted</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for username, score in rankings %}
+                                {% set rank = loop.index %}
+                                <tr class="{{ 'bg-light-yellow fw-bold' if rank == 1 else '' }}">
+                                    <td class="py-3 fw-bold">
+                                        {% if rank == 1 %}
+                                            <span class="fs-4">🥇</span>
+                                        {% elif rank == 2 %}
+                                            <span class="fs-4">🥈</span>
+                                        {% elif rank == 3 %}
+                                            <span class="fs-4">🥉</span>
+                                        {% else %}
+                                            #{{ rank }}
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3">{{ username }}</td>
+                                    <td class="py-3">
+                                        <span class="badge bg-primary fs-6">{{ score }}</span>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="3" class="py-5 text-muted">No students in the rankings yet.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="mt-3 text-center">
+            <p class="text-muted small">The leaderboard is based on the total number of unique questions attempted.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
