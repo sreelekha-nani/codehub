@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <!-- Problem Description Column -->
+    <div class="col-md-5 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h4 class="mb-0 fw-bold text-primary">{{ question.title }}</h4>
+                <div id="timer" class="badge bg-danger fs-6 p-2">Time Left: 00:00</div>
+            </div>
+            <div class="card-body" style="max-height: 70vh; overflow-y: auto;">
+                <p class="text-secondary mb-4">{{ question.description }}</p>
+                
+                <h6 class="fw-bold text-dark">Sample Input:</h6>
+                <pre class="bg-light p-3 rounded-3 mb-3">{{ question.sample_input }}</pre>
+                
+                <h6 class="fw-bold text-dark">Sample Output:</h6>
+                <pre class="bg-light p-3 rounded-3">{{ question.sample_output }}</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Editor Column -->
+    <div class="col-md-7 mb-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+                <span class="fw-bold"><i class="bi bi-code-slash me-2"></i>Python Code Editor</span>
+                <select id="language" class="form-select form-select-sm bg-dark text-white border-secondary" style="width: 150px;" disabled>
+                    <option value="python">Python 3</option>
+                </select>
+            </div>
+            <div class="card-body p-0">
+                <textarea id="editor" class="form-control font-monospace p-3" rows="15" placeholder="# Write your Python code here..." style="background: #1e1e1e; color: #d4d4d4; border: none; font-size: 14px; outline: none;"></textarea>
+            </div>
+            <div class="card-footer bg-white py-3">
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <label class="form-label small fw-bold text-muted">Custom Input (for Run Code)</label>
+                        <textarea id="customInput" class="form-control bg-light" rows="2" placeholder="Enter input here..."></textarea>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button id="runBtn" class="btn btn-outline-dark px-4"><i class="bi bi-play-fill me-1"></i>Run Code</button>
+                    <button id="submitBtn" class="btn btn-primary px-4"><i class="bi bi-cloud-arrow-up-fill me-1"></i>Submit Solution</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Output Display -->
+        <div id="outputContainer" class="mt-4 d-none">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light py-2 fw-bold text-muted small">Execution Result</div>
+                <div class="card-body">
+                    <pre id="outputArea" class="bg-dark text-light p-3 rounded-3 mb-0" style="max-height: 200px; overflow-y: auto;"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Results -->
+<div class="modal fade" id="resultModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-body text-center py-5">
+                <div id="resultIcon" class="mb-4" style="font-size: 4rem;"></div>
+                <h2 id="resultTitle" class="fw-bold mb-2"></h2>
+                <p id="resultBody" class="text-muted fs-5 mb-4"></p>
+                <div class="d-flex justify-content-center gap-3">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Close</button>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary px-4">Go to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Timer Logic
+    let timeLimitMinutes = {{ question.time_limit or 5 }};
+    let timeLeft = timeLimitMinutes * 60;
+    const timerDisplay = document.getElementById('timer');
+
+    const countdown = setInterval(() => {
+        let minutes = Math.floor(timeLeft / 60);
+        let seconds = timeLeft % 60;
+        timerDisplay.textContent = `Time Left: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        
+        if (timeLeft <= 0) {
+            clearInterval(countdown);
+            alert("Time's up! Your solution will be submitted automatically.");
+            submitSolution();
+        }
+        timeLeft--;
+    }, 1000);
+
+    // Code Execution
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        const code = document.getElementById('editor').value;
+        const input = document.getElementById('customInput').value;
+        const runBtn = document.getElementById('runBtn');
+        const outputContainer = document.getElementById('outputContainer');
+        const outputArea = document.getElementById('outputArea');
+
+        runBtn.disabled = true;
+        runBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Running...';
+
+        try {
+            const response = await fetch('/run_code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code, input })
+            });
+            const data = await response.json();
+            outputContainer.classList.remove('d-none');
+            outputArea.textContent = data.output;
+            outputArea.style.color = data.status === 'error' ? '#ff6b6b' : '#d4d4d4';
+        } catch (e) {
+            alert("Error running code: " + e);
+        } finally {
+            runBtn.disabled = false;
+            runBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Run Code';
+        }
+    });
+
+    // Submission Logic
+    document.getElementById('submitBtn').addEventListener('click', submitSolution);
+
+    async function submitSolution() {
+        const code = document.getElementById('editor').value;
+        const submitBtn = document.getElementById('submitBtn');
+        const modal = new bootstrap.Modal(document.getElementById('resultModal'));
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+
+        try {
+            const response = await fetch('/submit_solution/{{ question.id }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code })
+            });
+            const data = await response.json();
+            
+            const icon = document.getElementById('resultIcon');
+            const title = document.getElementById('resultTitle');
+            const body = document.getElementById('resultBody');
+
+            if (data.status === 'Passed') {
+                icon.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+                icon.className = 'bi bi-check-circle-fill text-success mb-4';
+                title.textContent = 'All Test Cases Passed!';
+                title.className = 'fw-bold mb-2 text-success';
+            } else {
+                icon.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
+                title.textContent = 'Challenge Failed';
+                title.className = 'fw-bold mb-2 text-danger';
+            }
+            body.textContent = `Score: ${data.score}% (${data.passed}/${data.total} Passed)`;
+            modal.show();
+            clearInterval(countdown);
+        } catch (e) {
+            alert("Error submitting solution: " + e);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-1"></i>Submit Solution';
+        }
+    }
+</script>
+{% endblock %}

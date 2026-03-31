@@ -3,8 +3,8 @@
 {% block content %}
 <div class="row">
     <div class="col-md-12 mb-4 text-center">
-        <h1 class="fw-bold">Student Dashboard</h1>
-        <p class="lead text-muted">Solve coding challenges and sharpen your skills.</p>
+        <h1 class="fw-bold">Available Challenges</h1>
+        <p class="lead text-muted">Select a challenge and start coding!</p>
     </div>
 </div>
 
@@ -16,33 +16,25 @@
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <h4 class="card-title fw-bold text-primary">{{ question.title }}</h4>
                         {% if question.id in user_submissions %}
-                            {% if user_submissions[question.id].answer == question.answer %}
-                                <span class="badge bg-success">Solved</span>
-                            {% else %}
-                                <span class="badge bg-warning text-dark">Incorrect Attempt</span>
-                            {% endif %}
+                            <span class="badge bg-success">Attempted</span>
                         {% else %}
-                            <span class="badge bg-secondary text-white">Pending</span>
+                            <span class="badge bg-secondary">New</span>
                         {% endif %}
                     </div>
-                    <p class="card-text text-secondary">{{ question.description }}</p>
+                    <p class="card-text text-secondary">{{ question.description|truncate(150) }}</p>
                     
-                    <form action="{{ url_for('submit_answer', question_id=question.id) }}" method="POST" class="mt-4">
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-uppercase">Your Answer</label>
-                            <textarea name="answer" class="form-control bg-light" rows="3" placeholder="Type your answer or code here..." required>{{ user_submissions[question.id].answer if question.id in user_submissions else '' }}</textarea>
-                        </div>
-                        <button type="submit" class="btn btn-outline-primary w-100">
-                            {{ 'Update Submission' if question.id in user_submissions else 'Submit Answer' }}
-                        </button>
-                    </form>
+                    <div class="mt-4">
+                        <a href="{{ url_for('solve', qid=question.id) }}" class="btn btn-primary w-100 py-2">
+                            <i class="bi bi-code-square me-2"></i>Solve Challenge
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     {% else %}
-        <div class="col-12">
-            <div class="alert alert-info text-center py-5">
-                <h4>No questions available right now.</h4>
+        <div class="col-12 text-center py-5">
+            <div class="alert alert-light border shadow-sm">
+                <h4 class="text-muted">No questions available right now.</h4>
                 <p class="mb-0">Check back later or wait for the admin to add new challenges.</p>
             </div>
         </div>

@@ -1,7 +1,5 @@
 Flask
 Flask-SQLAlchemy
 Flask-Login
-gunicorn
-psycopg2-binary
 pandas
 openpyxl

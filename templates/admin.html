@@ -28,7 +28,6 @@
                     </div>
                 </div>
 
-                <!-- Display Generated Batch Credentials -->
                 {% if session.batch_credentials %}
                     <div class="mt-4 p-3 bg-light rounded-3 border">
                         <h6 class="fw-bold text-success mb-3">Recently Generated Batch:</h6>
@@ -39,11 +38,8 @@
                                 {% endfor %}
                             </ul>
                         </div>
-                        <div class="mt-2">
-                            <form action="{{ url_for('admin_panel') }}" method="GET">
-                                {% set _ = session.pop('batch_credentials', None) %}
-                                <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss</button>
-                            </form>
+                        <div class="mt-2 text-end">
+                            <a href="{{ url_for('admin_panel') }}" class="btn btn-sm btn-outline-secondary">Dismiss</a>
                         </div>
                     </div>
                 {% endif %}
@@ -77,8 +73,9 @@
                                     <td class="py-3"><span class="badge bg-light text-dark border">{{ student.submissions|length }}</span></td>
                                     <td class="py-3">
                                         <div class="btn-group">
-                                            <a href="{{ url_for('edit_student', id=student.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                                            <a href="{{ url_for('delete_student', id=student.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Permanently delete student?')"><i class="bi bi-trash"></i></a>
+                                            <a href="{{ url_for('edit_password', user_id=student.id) }}" class="btn btn-sm btn-outline-warning" title="Update Password"><i class="bi bi-key"></i></a>
+                                            <a href="{{ url_for('edit_student', id=student.id) }}" class="btn btn-sm btn-outline-primary" title="Edit Student"><i class="bi bi-pencil"></i></a>
+                                            <a href="{{ url_for('delete_student', id=student.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Permanently delete student?')" title="Delete Student"><i class="bi bi-trash"></i></a>
                                         </div>
                                     </td>
                                 </tr>
@@ -98,21 +95,35 @@
     <div class="col-lg-5 mb-4">
         <div class="card shadow-sm border-0">
             <div class="card-header bg-white py-3">
-                <h5 class="mb-0 fw-bold text-success"><i class="bi bi-plus-circle me-2"></i>Add Question</h5>
+                <h5 class="mb-0 fw-bold text-success"><i class="bi bi-plus-circle me-2"></i>New Competition Challenge</h5>
             </div>
             <div class="card-body">
                 <form action="{{ url_for('add_question') }}" method="POST">
-                    <div class="mb-3">
+                    <div class="mb-2">
                         <label class="form-label small fw-bold text-muted">Title</label>
                         <input type="text" name="title" class="form-control" required>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-2">
                         <label class="form-label small fw-bold text-muted">Description</label>
                         <textarea name="description" class="form-control" rows="3" required></textarea>
                     </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label small fw-bold text-muted">Sample Input</label>
+                            <textarea name="sample_input" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label small fw-bold text-muted">Sample Output</label>
+                            <textarea name="sample_output" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold text-muted">Hidden Test Cases (JSON)</label>
+                        <textarea name="test_cases" class="form-control" rows="3" placeholder='[{"input": "1 2", "output": "3"}]'></textarea>
+                    </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted">Answer</label>
-                        <input type="text" name="answer" class="form-control" required>
+                        <label class="form-label small fw-bold text-muted">Time Limit (Minutes)</label>
+                        <input type="number" name="time_limit" class="form-control" value="5" required>
                     </div>
                     <button type="submit" class="btn btn-success w-100">Publish Challenge</button>
                 </form>
