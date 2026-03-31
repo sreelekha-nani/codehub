@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-body p-5">
+                <h2 class="text-center mb-4 fw-bold text-dark"><i class="bi bi-shield-lock me-2"></i>Admin Login</h2>
+                
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label fw-semibold text-secondary small text-uppercase">Admin ID</label>
+                        <input type="text" name="username" class="form-control form-control-lg bg-light border-0" id="username" placeholder="Enter admin username" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="form-label fw-semibold text-secondary small text-uppercase">Secure Password</label>
+                        <input type="password" name="password" class="form-control form-control-lg bg-light border-0" id="password" placeholder="Enter admin password" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-dark btn-lg shadow-sm py-3 fw-bold">Authenticate Admin</button>
+                    </div>
+                </form>
+                <div class="mt-4 text-center">
+                    <a href="{{ url_for('login') }}" class="text-decoration-none small text-muted">Not an admin? Go to Student Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

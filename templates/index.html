@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="col-md-8 text-center">
+        <h1 class="display-3 fw-bold text-primary mb-4">Welcome to CodeHub</h1>
+        <p class="lead text-secondary mb-5 fs-4">The ultimate platform for coding competitions and skill building. Are you ready to solve the challenge?</p>
+        
+        <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg px-5 py-3 shadow-sm rounded-pill fw-bold">Student Portal</a>
+            <a href="{{ url_for('admin_login') }}" class="btn btn-outline-secondary btn-lg px-5 py-3 rounded-pill fw-bold">Admin Login</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
