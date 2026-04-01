@@ -4,7 +4,17 @@ body {
     color: #ffffff;
 }
 
-/* Sidebar Styling */
+/* Global Text Contrast */
+h1, h2, h3, h4, h5, h6, p, span, div, li, label {
+    color: inherit; /* Inherit white from body */
+}
+
+.text-white { color: #ffffff !important; }
+.text-dark { color: #000000 !important; }
+.text-muted { color: #a1a1aa !important; }
+.text-secondary { color: #a1a1aa !important; }
+
+/* Sidebar Styling - Dark Navy */
 #sidebar {
     width: 240px;
     height: 100vh;
@@ -12,55 +22,43 @@ body {
     top: 0;
     left: 0;
     background: #0f172a;
-    color: white;
+    color: #ffffff;
     transition: all 0.3s;
     z-index: 1000;
-    box-shadow: 4px 0 10px rgba(0,0,0,0.3);
+    box-shadow: 4px 0 10px rgba(0,0,0,0.5);
     border-right: 1px solid #1e293b;
 }
 
 #sidebar .sidebar-header {
     padding: 20px;
-    background: rgba(0,0,0,0.2);
+    background: rgba(0,0,0,0.3);
     border-bottom: 1px solid #1e293b;
+    color: #ffffff !important;
 }
 
 #sidebar .nav-link {
-    color: #a1a1aa;
+    color: #a1a1aa !important;
     padding: 12px 20px;
     margin: 4px 10px;
     border-radius: 8px;
     display: flex;
     align-items: center;
     transition: all 0.2s;
+    opacity: 1 !important;
 }
 
 #sidebar .nav-link:hover {
-    color: white;
+    color: #ffffff !important;
     background: #1f2937;
 }
 
 #sidebar .nav-link.active {
-    color: white;
+    color: #ffffff !important;
     background: #1e293b;
-    font-weight: 500;
+    font-weight: 600;
 }
 
-#sidebar .nav-link i {
-    font-size: 1.2rem;
-    margin-right: 12px;
-}
-
-/* Main Content Styling */
-#content {
-    margin-left: 240px;
-    width: calc(100% - 240px);
-    transition: all 0.3s;
-    min-height: 100vh;
-    background-color: #0a0a0a;
-}
-
-/* Top Navbar Styling */
+/* Top Navbar Styling - Pure Black */
 .top-navbar {
     background: #000000;
     padding: 15px 30px;
@@ -73,134 +71,86 @@ body {
     z-index: 999;
 }
 
-.top-navbar h5 { color: white !important; }
-
-/* Card Improvements */
-.card {
-    background-color: #111111;
-    border: 1px solid #222222;
-    border-radius: 12px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.5);
-    margin-bottom: 24px;
-    transition: transform 0.2s, box-shadow 0.2s;
+.top-navbar h5, .top-navbar span, .top-navbar strong {
+    color: #ffffff !important;
 }
 
-.card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(255,255,255,0.02);
+/* Card Styling - Deep Black */
+.card {
+    background-color: #111111 !important;
+    border: 1px solid #222222 !important;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    margin-bottom: 24px;
+    color: #ffffff !important;
 }
 
 .card-header {
-    background: #18181b;
-    border-bottom: 1px solid #222222;
+    background: #18181b !important;
+    border-bottom: 1px solid #222222 !important;
     padding: 15px 20px;
-    border-radius: 12px 12px 0 0 !important;
-    color: white !important;
+    color: #ffffff !important;
+}
+
+.card-header h4, .card-header h5, .card-header h6, .card-header span {
+    color: #ffffff !important;
 }
 
 .card-body {
-    padding: 20px;
-    color: #a1a1aa;
+    color: #ffffff !important;
+    opacity: 1 !important;
 }
 
-/* Text Overrides */
-.text-dark { color: #ffffff !important; }
-.text-muted { color: #71717a !important; }
-.text-primary { color: #ffffff !important; }
-.text-success { color: #10b981 !important; }
+.card-footer {
+    background: #18181b !important;
+    border-top: 1px solid #222222 !important;
+    color: #ffffff !important;
+}
 
-/* Table Styling */
+/* Light Background Overrides (Force Black Text) */
+.bg-light, .bg-white {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+}
+
+.bg-light p, .bg-light span, .bg-light h6, .bg-light h5, .bg-light div,
+.bg-white p, .bg-white span, .bg-white h6, .bg-white h5, .bg-white div {
+    color: #000000 !important;
+}
+
+/* Table Styling - High Contrast */
 .table {
     margin-bottom: 0;
     color: #ffffff !important;
     background-color: #0a0a0a !important;
-    border-color: #222222 !important;
 }
 
 .table thead th {
     background-color: #000000 !important;
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    letter-spacing: 0.5px;
-    font-weight: 700;
     color: #ffffff !important;
-    border-bottom: 2px solid #222222 !important;
+    font-weight: 700;
+    border-bottom: 2px solid #333333 !important;
     padding: 15px 20px;
 }
 
 .table tbody tr {
     background-color: #111111 !important;
-    transition: background-color 0.2s;
+    border-bottom: 1px solid #222222 !important;
 }
 
 .table tbody td {
-    padding: 12px 20px;
-    vertical-align: middle;
-    border-bottom: 1px solid #222222 !important;
-    color: #e5e5e5 !important; /* Secondary text */
-}
-
-/* Username Column Visibility Fix */
-.table tbody td:first-child, 
-.table tbody td.text-dark {
     color: #ffffff !important;
-    font-weight: 600 !important;
+    padding: 15px 20px;
+    vertical-align: middle;
 }
 
 .table-hover tbody tr:hover {
     background-color: #1f1f1f !important;
 }
 
-/* Remove Bootstrap striping and default backgrounds */
-.table-striped > tbody > tr:nth-of-type(odd) > * {
-    background-color: transparent !important;
-    box-shadow: none !important;
-    color: inherit !important;
-}
-
-.table > :not(caption) > * > * {
-    background-color: transparent !important;
-    box-shadow: none !important;
-}
-
-/* Button Styling */
-.btn {
-    border-radius: 8px;
-    padding: 8px 16px;
-    font-weight: 500;
-    transition: all 0.2s;
-}
-
-.btn-primary { 
-    background-color: #ffffff; 
-    color: #000000; 
-    border: none; 
-}
-.btn-primary:hover { 
-    background-color: #e2e2e2; 
-    color: #000000; 
-}
-
-.btn-outline-primary { 
-    border-color: #ffffff; 
-    color: #ffffff; 
-}
-.btn-outline-primary:hover { 
-    background-color: #ffffff; 
-    color: #000000; 
-}
-
-.btn-success { background-color: #10b981; border: none; }
-.btn-danger { background-color: #ef4444; border: none; }
-
-.btn-light {
-    background-color: #1f2937;
-    border: 1px solid #374151;
-    color: white;
-}
-.btn-light:hover {
-    background-color: #374151;
-    color: white;
+/* Username Specific */
+.table td.fw-bold, .table td:first-child {
+    color: #ffffff !important;
 }
 
 /* Form Styling */
@@ -209,103 +159,103 @@ body {
     border: 1px solid #333333 !important;
     color: #ffffff !important;
     border-radius: 8px;
-    padding: 10px 15px;
-    transition: all 0.2s ease-in-out;
+    opacity: 1 !important;
 }
 
 .form-control:focus, .form-select:focus {
     background-color: #0a0a0a !important;
-    border-color: #555555 !important;
+    border-color: #ffffff !important;
     color: #ffffff !important;
     box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1) !important;
-    outline: none;
 }
 
-/* Placeholder Styling */
 .form-control::placeholder {
     color: #9ca3af !important;
-    opacity: 1; /* Firefox fix */
 }
 
-/* Label Styling */
 .form-label {
-    color: #e5e5e5 !important;
+    color: #ffffff !important;
     font-weight: 600 !important;
-    margin-bottom: 8px;
-    display: block;
+    opacity: 1 !important;
 }
 
-/* Textarea Specifics */
-textarea.form-control {
-    min-height: 100px;
+/* Code Editor Specific Fix */
+#editor {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    border: 1px solid #333333 !important;
+    caret-color: #ffffff !important; /* Visible cursor */
 }
 
-/* Badge Styling */
-.badge {
-    padding: 6px 10px;
-    font-weight: 500;
-    border-radius: 6px;
+/* Button Styling */
+.btn-primary { 
+    background-color: #ffffff !important; 
+    color: #000000 !important; 
+    border: none !important;
+    font-weight: 700 !important;
 }
-.bg-light { background-color: #27272a !important; color: white !important; }
-.bg-primary { background-color: #ffffff !important; color: #000000 !important; }
+
+.btn-primary:hover { 
+    background-color: #cccccc !important; 
+}
+
+.btn-outline-dark, .btn-outline-secondary {
+    border-color: #ffffff !important;
+    color: #ffffff !important;
+}
+
+.btn-outline-dark:hover {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+}
+
+.btn-light {
+    background-color: #27272a !important;
+    color: #ffffff !important;
+    border: 1px solid #3f3f46 !important;
+}
 
 /* Modal Styling */
 .modal-content {
-    background-color: #111111;
-    border: 1px solid #222222;
-    border-radius: 15px;
-    overflow: hidden;
-    color: #ffffff;
+    background-color: #111111 !important;
+    border: 1px solid #222222 !important;
+    color: #ffffff !important;
 }
 
-.modal-header {
-    border-bottom: 1px solid #222222;
-}
-.modal-footer {
-    border-top: 1px solid #222222;
+.modal-header, .modal-footer {
+    border-color: #222222 !important;
 }
 
-.modal-backdrop.show {
-    backdrop-filter: blur(8px);
-    background-color: rgba(0,0,0,0.8);
+.modal-body p, .modal-body h2 {
+    color: #ffffff !important;
 }
 
 /* Alert Styling */
-.alert-success { background-color: #064e3b; color: #34d399; border: none; }
-.alert-danger { background-color: #450a0a; color: #f87171; border: none; }
-
-/* Dropdown Styling */
-.dropdown-menu {
-    background-color: #111111;
-    border: 1px solid #222222;
-    box-shadow: 0 10px 15px rgba(0,0,0,0.5);
+.alert {
+    border: none !important;
+    opacity: 1 !important;
+    font-weight: 600 !important;
 }
-.dropdown-item { color: #a1a1aa; }
-.dropdown-item:hover { background-color: #1f1f1f; color: white; }
+
+.alert-success { background-color: #064e3b !important; color: #ffffff !important; }
+.alert-danger { background-color: #450a0a !important; color: #ffffff !important; }
+
+/* Code/Pre blocks */
+pre, code {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    border: 1px solid #333333 !important;
+}
+
+/* Timer */
+#timer {
+    background-color: #ef4444 !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+}
 
 /* Scrollbar Styling */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #0a0a0a; }
-::-webkit-scrollbar-thumb { background: #222222; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #333333; }
-
-/* Responsive Sidebar */
-@media (max-width: 991.98px) {
-    #sidebar {
-        margin-left: -240px;
-    }
-    #sidebar.active {
-        margin-left: 0;
-    }
-    #content {
-        margin-left: 0;
-        width: 100%;
-    }
-}
-
-code {
-    background: #1a1a1a;
-    padding: 2px 4px;
-    border-radius: 4px;
-    color: #f472b6;
-}
+::-webkit-scrollbar-thumb { background: #333333; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #555555; }
