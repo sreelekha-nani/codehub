@@ -1,158 +1,350 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="row">
-    <div class="col-md-12 mb-4">
-        <h1 class="fw-bold text-dark">Admin Control Panel</h1>
-        <p class="text-muted">Manage challenges and student recruitment.</p>
+{% block main_layout %}
+<div class="d-flex">
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h4 class="mb-0 fw-bold"><i class="bi bi-code-slash me-2"></i>CodeHub</h4>
+            <small class="text-white-50">Admin Dashboard</small>
+        </div>
+        <ul class="nav flex-column mt-4">
+            <li class="nav-item">
+                <a class="nav-link active" href="{{ url_for('admin_panel') }}">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#students-section">
+                    <i class="bi bi-people"></i> Students
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#batchUploadModal">
+                    <i class="bi bi-file-earmark-excel"></i> Batch Upload
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#challenges-section">
+                    <i class="bi bi-trophy"></i> Challenges
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('leaderboard') }}">
+                    <i class="bi bi-bar-chart-line"></i> Leaderboard
+                </a>
+            </li>
+            <hr class="mx-3 text-white-50">
+            <li class="nav-item">
+                <a class="nav-link text-danger" href="{{ url_for('logout') }}">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
+            </li>
+        </ul>
     </div>
-</div>
 
-<div class="row">
-    <!-- Batch Creation Section (Excel) -->
-    <div class="col-lg-12 mb-4">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white py-3">
-                <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-file-earmark-excel me-2"></i>Batch Student Recruitment</h5>
+    <!-- Main Content -->
+    <div id="content">
+        <!-- Top Navbar -->
+        <div class="top-navbar">
+            <div class="d-flex align-items-center">
+                <button id="sidebarCollapse" class="btn btn-light d-lg-none me-3">
+                    <i class="bi bi-list"></i>
+                </button>
+                <h5 class="mb-0 fw-bold text-dark">Admin Control Panel</h5>
             </div>
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-md-8">
-                        <p class="text-muted mb-0 small">Upload an Excel (.xlsx) file with an <b>'email'</b> column to auto-generate students.</p>
-                    </div>
-                    <div class="col-md-4 text-end">
-                        <form action="{{ url_for('upload_students') }}" method="POST" enctype="multipart/form-data" class="d-flex gap-2">
-                            <input type="file" name="file" class="form-control form-control-sm" accept=".xlsx" required>
-                            <button type="submit" class="btn btn-sm btn-primary">Upload</button>
-                        </form>
-                    </div>
+            <div class="d-flex align-items-center">
+                <span class="text-muted me-3 d-none d-md-inline">Welcome, <strong>{{ current_user.username }}</strong></span>
+                <div class="dropdown">
+                    <a href="#" class="btn btn-light rounded-circle p-2" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle fs-5"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                        <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                    </ul>
                 </div>
+            </div>
+        </div>
 
-                {% if session.batch_credentials %}
-                    <div class="mt-4 p-3 bg-light rounded-3 border">
-                        <h6 class="fw-bold text-success mb-3">Recently Generated Batch:</h6>
-                        <div style="max-height: 200px; overflow-y: auto;">
+        <div class="p-4">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show mb-4 shadow-sm" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Batch Credentials Results -->
+            {% if session.batch_credentials %}
+                <div class="card mb-4 border-start border-4 border-success">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold text-success mb-0"><i class="bi bi-check-circle-fill me-2"></i>Recently Generated Batch</h6>
+                        <a href="{{ url_for('admin_panel') }}" class="btn btn-sm btn-outline-secondary">Dismiss</a>
+                    </div>
+                    <div class="card-body">
+                        <div style="max-height: 200px; overflow-y: auto;" class="bg-light p-3 rounded">
                             <ul class="list-unstyled mb-0 small font-monospace">
                                 {% for item in session.batch_credentials %}
-                                    <li class="mb-1 border-bottom pb-1">{{ item }}</li>
+                                    <li class="mb-1 border-bottom pb-1 border-2">{{ item }}</li>
                                 {% endfor %}
                             </ul>
                         </div>
-                        <div class="mt-2 text-end">
-                            <a href="{{ url_for('admin_panel') }}" class="btn btn-sm btn-outline-secondary">Dismiss</a>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Student Management Section -->
+            <div id="students-section" class="row">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-people me-2"></i>Student Management</h5>
+                            <div>
+                                <button class="btn btn-sm btn-primary me-2" data-bs-toggle="modal" data-bs-target="#batchUploadModal">
+                                    <i class="bi bi-plus-lg me-1"></i> Add Batch
+                                </button>
+                                <span class="badge bg-primary rounded-pill">{{ students|length }} Enrolled</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Username</th>
+                                            <th>Email</th>
+                                            <th class="text-center">Submissions</th>
+                                            <th class="text-end">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for student in students %}
+                                            <tr>
+                                                <td class="fw-bold text-dark">{{ student.username }}</td>
+                                                <td class="text-muted small">{{ student.email or 'N/A' }}</td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-light text-primary border">{{ student.submissions|length }}</span>
+                                                </td>
+                                                <td class="text-end">
+                                                    <div class="btn-group">
+                                                        <button onclick="showPassword('{{ student.raw_password or 'N/A' }}')" class="btn btn-sm btn-outline-success rounded-circle me-1" title="View Password">
+                                                            <i class="bi bi-key"></i>
+                                                        </button>
+                                                        <button onclick="openEditModal('{{ student.id }}', '{{ student.username }}')" class="btn btn-sm btn-outline-warning rounded-circle me-1" title="Edit Password">
+                                                            <i class="bi bi-pencil-square"></i>
+                                                        </button>
+                                                        <a href="{{ url_for('edit_student', id=student.id) }}" class="btn btn-sm btn-outline-primary rounded-circle me-1" title="Edit Student Info">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </a>
+                                                        <a href="{{ url_for('delete_student', id=student.id) }}" class="btn btn-sm btn-outline-danger rounded-circle" onclick="return confirm('Permanently delete student?')" title="Delete Student">
+                                                            <i class="bi bi-trash"></i>
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% else %}
+                                            <tr><td colspan="4" class="text-center py-5 text-muted">No students found. Upload an Excel list to get started.</td></tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                {% endif %}
+                </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Student Management Table -->
-    <div class="col-lg-12 mb-4">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-people me-2"></i>Student Management</h5>
-                <span class="badge bg-primary rounded-pill">{{ students|length }} Enrolled</span>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0 align-middle text-center">
-                        <thead class="bg-light">
-                            <tr>
-                                <th class="py-3 border-0">Username</th>
-                                <th class="py-3 border-0">Email</th>
-                                <th class="py-3 border-0">Submissions</th>
-                                <th class="py-3 border-0">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for student in students %}
-                                <tr>
-                                    <td class="py-3 fw-bold">{{ student.username }}</td>
-                                    <td class="py-3 text-muted small">{{ student.email or 'N/A' }}</td>
-                                    <td class="py-3"><span class="badge bg-light text-dark border">{{ student.submissions|length }}</span></td>
-                                    <td class="py-3">
-                                        <div class="btn-group">
-                                            <a href="{{ url_for('edit_password', user_id=student.id) }}" class="btn btn-sm btn-outline-warning" title="Update Password"><i class="bi bi-key"></i></a>
-                                            <a href="{{ url_for('edit_student', id=student.id) }}" class="btn btn-sm btn-outline-primary" title="Edit Student"><i class="bi bi-pencil"></i></a>
-                                            <a href="{{ url_for('delete_student', id=student.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Permanently delete student?')" title="Delete Student"><i class="bi bi-trash"></i></a>
+            <!-- Challenges Section -->
+            <div id="challenges-section" class="row">
+                <!-- Existing Challenges -->
+                <div class="col-lg-12 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-code-square me-2"></i>Existing Challenges</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <ul class="list-group list-group-flush">
+                                {% for q in questions %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <div>
+                                            <h6 class="mb-0 fw-bold">{{ q.title }}</h6>
+                                            <p class="text-muted small mb-0">{{ q.description|truncate(80) }}</p>
                                         </div>
-                                    </td>
-                                </tr>
-                            {% else %}
-                                <tr><td colspan="4" class="text-center py-5 text-muted">No students found. Upload an Excel list to get started.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                        <div class="text-end">
+                                            <span class="badge bg-secondary rounded-pill mb-1">{{ q.submissions|length }} subms</span>
+                                            <div class="small text-muted">Time: {{ q.time_limit }} min</div>
+                                        </div>
+                                    </li>
+                                {% else %}
+                                    <li class="list-group-item text-center py-5 text-muted">No questions yet.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- New Challenge Form -->
+                <div class="col-lg-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0 fw-bold text-success"><i class="bi bi-plus-circle me-2"></i>New Competition Challenge</h5>
+                        </div>
+                        <div class="card-body">
+                            <form action="{{ url_for('add_question') }}" method="POST">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label small fw-bold text-muted">Challenge Title</label>
+                                        <input type="text" name="title" class="form-control form-control-lg" placeholder="e.g. FizzBuzz Ultimate" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label small fw-bold text-muted">Time Limit (Minutes)</label>
+                                        <input type="number" name="time_limit" class="form-control form-control-lg" value="5" required>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold text-muted">Description</label>
+                                    <textarea name="description" class="form-control" rows="3" placeholder="Describe the problem clearly..." required></textarea>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label small fw-bold text-muted">Sample Input</label>
+                                        <textarea name="sample_input" class="form-control" rows="2" placeholder="Input provided to student"></textarea>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label small fw-bold text-muted">Sample Output</label>
+                                        <textarea name="sample_output" class="form-control" rows="2" placeholder="Expected output"></textarea>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label small fw-bold text-muted">Hidden Test Cases (JSON Format)</label>
+                                    <textarea name="test_cases" class="form-control font-monospace" rows="3" placeholder='[{"input": "1 2", "output": "3"}, {"input": "5 5", "output": "10"}]'></textarea>
+                                    <div class="form-text small">Provide an array of input/output pairs for automated grading.</div>
+                                </div>
+                                <div class="text-end">
+                                    <button type="submit" class="btn btn-success btn-lg px-5 shadow-sm">
+                                        <i class="bi bi-send me-2"></i>Publish Challenge
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <!-- Add Question Section -->
-    <div class="col-lg-5 mb-4">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white py-3">
-                <h5 class="mb-0 fw-bold text-success"><i class="bi bi-plus-circle me-2"></i>New Competition Challenge</h5>
+<!-- Batch Upload Modal -->
+<div class="modal fade" id="batchUploadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-excel me-2"></i>Batch Student Recruitment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="card-body">
-                <form action="{{ url_for('add_question') }}" method="POST">
-                    <div class="mb-2">
-                        <label class="form-label small fw-bold text-muted">Title</label>
-                        <input type="text" name="title" class="form-control" required>
+            <div class="modal-body p-4">
+                <p class="text-muted">Upload an Excel (.xlsx) file with an <b>'email'</b> column. We'll automatically generate usernames and passwords for each student.</p>
+                <form action="{{ url_for('upload_students') }}" method="POST" enctype="multipart/form-data">
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Select Excel File</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx" required>
                     </div>
-                    <div class="mb-2">
-                        <label class="form-label small fw-bold text-muted">Description</label>
-                        <textarea name="description" class="form-control" rows="3" required></textarea>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary py-2 fw-bold">
+                            <i class="bi bi-cloud-upload me-2"></i>Upload and Process
+                        </button>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-2">
-                            <label class="form-label small fw-bold text-muted">Sample Input</label>
-                            <textarea name="sample_input" class="form-control" rows="2"></textarea>
-                        </div>
-                        <div class="col-md-6 mb-2">
-                            <label class="form-label small fw-bold text-muted">Sample Output</label>
-                            <textarea name="sample_output" class="form-control" rows="2"></textarea>
-                        </div>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label small fw-bold text-muted">Hidden Test Cases (JSON)</label>
-                        <textarea name="test_cases" class="form-control" rows="3" placeholder='[{"input": "1 2", "output": "3"}]'></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted">Time Limit (Minutes)</label>
-                        <input type="number" name="time_limit" class="form-control" value="5" required>
-                    </div>
-                    <button type="submit" class="btn btn-success w-100">Publish Challenge</button>
                 </form>
             </div>
-        </div>
-    </div>
-
-    <!-- Questions List Section -->
-    <div class="col-lg-7 mb-4">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-white py-3">
-                <h5 class="mb-0 fw-bold"><i class="bi bi-code-square me-2"></i>Existing Challenges</h5>
-            </div>
-            <div class="card-body p-0">
-                <ul class="list-group list-group-flush">
-                    {% for q in questions %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent py-3">
-                            <div>
-                                <h6 class="mb-0 fw-bold">{{ q.title }}</h6>
-                                <span class="text-muted small">Expected: {{ q.answer }}</span>
-                            </div>
-                            <span class="badge bg-secondary rounded-pill">{{ q.submissions|length }} subms</span>
-                        </li>
-                    {% else %}
-                        <li class="list-group-item text-center py-5 text-muted">No questions yet.</li>
-                    {% endfor %}
-                </ul>
+            <div class="modal-footer bg-light border-0">
+                <small class="text-muted w-100 text-center">Passwords will be displayed after processing.</small>
             </div>
         </div>
     </div>
 </div>
+
+<!-- View Password Modal -->
+<div class="modal fade" id="viewPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-key me-2"></i>View Student Password</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="text-muted mb-2">The auto-generated password for this student is:</p>
+                <h2 id="displayRawPassword" class="fw-bold text-dark font-monospace border p-3 rounded bg-light"></h2>
+                <p class="small text-danger mt-3 mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Never share this password in plain text.</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Password Modal -->
+<div class="modal fade" id="editPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Update Student Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('update_password') }}" method="POST">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="user_id" id="editUserId">
+                    <p class="text-muted small mb-3">Updating password for: <strong id="editUsernameDisplay"></strong></p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">New Password</label>
+                        <input type="text" name="new_password" class="form-control form-control-lg" placeholder="Enter new password" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning fw-bold">Update Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Sidebar toggle for mobile
+    document.getElementById('sidebarCollapse').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('active');
+    });
+
+    // Password View Function
+    function showPassword(password) {
+        document.getElementById('displayRawPassword').innerText = password;
+        var myModal = new bootstrap.Modal(document.getElementById('viewPasswordModal'));
+        myModal.show();
+    }
+
+    // Password Edit Modal Function
+    function openEditModal(userId, username) {
+        document.getElementById('editUserId').value = userId;
+        document.getElementById('editUsernameDisplay').innerText = username;
+        var myModal = new bootstrap.Modal(document.getElementById('editPasswordModal'));
+        myModal.show();
+    }
+
+    // Active menu item highlighting
+    document.addEventListener('DOMContentLoaded', function() {
+        const navLinks = document.querySelectorAll('#sidebar .nav-link');
+        const currentPath = window.location.hash || window.location.pathname;
+
+        navLinks.forEach(link => {
+            if (link.getAttribute('href') === currentPath) {
+                navLinks.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+            }
+        });
+    });
+</script>
 {% endblock %}

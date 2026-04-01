@@ -32,8 +32,10 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=True)
-    password = db.Column(db.Text, nullable=False)
+    password = db.Column(db.Text, nullable=False) # Existing hash field
     role = db.Column(db.String(50), nullable=False) 
+    raw_password = db.Column(db.String(150), nullable=True) # For admin view
+    password_hash = db.Column(db.Text, nullable=True) # New hash field
 
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -65,10 +67,14 @@ with app.app_context():
     # Force creation of tables with new columns
     db.create_all()
     if not User.query.filter_by(username='admin').first():
+        admin_pw = 'admin123'
+        hashed = generate_password_hash(admin_pw)
         admin_user = User(
             username='admin',
             email='admin@codehub.com',
-            password=generate_password_hash('admin123'),
+            password=hashed,
+            password_hash=hashed,
+            raw_password=admin_pw,
             role='admin'
         )
         db.session.add(admin_user)
@@ -100,7 +106,8 @@ def login():
     if request.method == 'POST':
         username, password = request.form.get('username'), request.form.get('password')
         user = User.query.filter_by(username=username, role='student').first()
-        if user and check_password_hash(user.password, password):
+        # Check either password or password_hash for backward compatibility
+        if user and (check_password_hash(user.password_hash or user.password, password)):
             login_user(user)
             return redirect(url_for('dashboard'))
         flash('Invalid credentials.', 'danger')
@@ -113,7 +120,7 @@ def admin_login():
     if request.method == 'POST':
         username, password = request.form.get('username'), request.form.get('password')
         user = User.query.filter_by(username=username, role='admin').first()
-        if user and check_password_hash(user.password, password):
+        if user and (check_password_hash(user.password_hash or user.password, password)):
             login_user(user)
             return redirect(url_for('admin_panel'))
         flash('Invalid admin credentials.', 'danger')
@@ -161,10 +168,13 @@ def upload_students():
                 if not User.query.filter_by(email=email).first():
                     username = get_next_student_id()
                     plain_password = generate_random_password()
+                    hashed = generate_password_hash(plain_password)
                     db.session.add(User(
                         username=username, 
                         email=email, 
-                        password=generate_password_hash(plain_password), 
+                        password=hashed, 
+                        password_hash=hashed,
+                        raw_password=plain_password,
                         role='student'
                     ))
                     db.session.commit()
@@ -176,6 +186,25 @@ def upload_students():
             flash(f"Error: {e}", 'danger')
     return redirect(url_for('admin_panel'))
 
+@app.route('/update_password', methods=['POST'])
+@login_required
+def update_password():
+    if current_user.role != 'admin': return jsonify({"status": "error", "message": "Unauthorized"}), 403
+    user_id = request.form.get('user_id')
+    new_password = request.form.get('new_password')
+    if not user_id or not new_password:
+        flash('Missing information', 'danger')
+        return redirect(url_for('admin_panel'))
+    
+    user = User.query.get_or_404(user_id)
+    hashed = generate_password_hash(new_password)
+    user.password = hashed
+    user.password_hash = hashed
+    user.raw_password = new_password
+    db.session.commit()
+    flash(f'Password updated for {user.username}', 'success')
+    return redirect(url_for('admin_panel'))
+
 @app.route('/edit_password/<int:user_id>', methods=['GET', 'POST'])
 @login_required
 def edit_password(user_id):
@@ -185,7 +214,10 @@ def edit_password(user_id):
         pw = request.form.get('password')
         cpw = request.form.get('confirm_password')
         if pw == cpw:
-            user.password = generate_password_hash(pw)
+            hashed = generate_password_hash(pw)
+            user.password = hashed
+            user.password_hash = hashed
+            user.raw_password = pw
             db.session.commit()
             flash(f'Password updated for {user.username}', 'success')
             return redirect(url_for('admin_panel'))
@@ -199,7 +231,12 @@ def edit_student(id):
     student = User.query.get_or_404(id)
     if request.method == 'POST':
         student.username, student.email = request.form.get('username'), request.form.get('email')
-        if request.form.get('password'): student.password = generate_password_hash(request.form.get('password'))
+        if request.form.get('password'): 
+            pw = request.form.get('password')
+            hashed = generate_password_hash(pw)
+            student.password = hashed
+            student.password_hash = hashed
+            student.raw_password = pw
         db.session.commit()
         return redirect(url_for('admin_panel'))
     return render_template('edit_student.html', student=student)
